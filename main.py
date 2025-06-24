@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from statsmodels.tsa.arima.model import ARIMA
 import logging
 import wbdata
+import traceback
 import wbgapi as wb
 import datetime
 from fastapi.responses import JSONResponse
@@ -114,10 +115,12 @@ def get_romania_inflation_average():
 
                 if val and isinstance(val, list) and val[0]['value'] is not None:
                     values.append(val[0]['value'])
+                else:
+                    logger.warning(f"⚠️ Valoare inflație lipsă pentru anul {year}.")
 
             except Exception as year_err:
                 logger.warning(f"⚠️ Eroare la preluarea datelor pentru anul {year}: {year_err}")
-                traceback.print_exc()
+                logger.debug(traceback.format_exc())
 
         if not values:
             logger.warning("⚠️ Nu s-au obținut valori valide pentru inflație.")
@@ -130,7 +133,6 @@ def get_romania_inflation_average():
     except Exception as e:
         logger.error("❌ Eroare generală în endpoint /inflation-average:")
         logger.error(str(e))
-        traceback.print_exc()
+        logger.debug(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": str(e)})
-
 
