@@ -103,6 +103,7 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
 
 @app.get("/inflation-average")
 def get_romania_inflation_average():
+    try:
         # Set indicator și țară
         indicator = {"FP.CPI.TOTL.ZG": "inflation"}
         country = "RO"
