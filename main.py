@@ -100,9 +100,6 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
     except Exception as e:
         logger.error(f"❌ Eroare în endpoint /predict-multi-arima: {e}")
         return {"error": str(e)}
-import wbdata
-import datetime
-from fastapi.responses import JSONResponse
 
 @app.get("/inflation-average")
 def get_romania_inflation_average():
