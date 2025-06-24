@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from statsmodels.tsa.arima.model import ARIMA
 import logging
 import wbdata
+import wbgapi as wb
 import datetime
 from fastapi.responses import JSONResponse
 # Configurare basic logging
@@ -106,37 +107,20 @@ from fastapi.responses import JSONResponse
 @app.get("/inflation-average")
 def get_romania_inflation_average():
     try:
-        import wbdata
-        import datetime
-        import logging
+        values = []
+        for year in range(2014, 2024):  # Ultimii 10 ani
 
-        logger = logging.getLogger("main")
+            val = wb.data.get('FP.CPI.TOTL.ZG', economy='RO', time=year)
 
-        # Definim intervalul de ani
-        end_date = datetime.datetime.today()
-        start_date = end_date.replace(year=end_date.year - 10)
-
-        indicator = {'FP.CPI.TOTL.ZG': 'inflation'}
-
-        # Obținem datele sub formă de DataFrame
-        df = wbdata.get_dataframe(indicator, country='RO', data_date=(start_date, end_date), convert_date=True)
-
-        if df.empty:
-            logger.warning("⚠️ Nu s-au găsit date în DataFrame.")
-            return JSONResponse(status_code=404, content={"error": "Datele lipsesc."})
-
-        # Eliminăm valorile lipsă și calculăm media
-        values = df["inflation"].dropna().tolist()
+            if val and isinstance(val, list) and val[0]['value'] is not None:
+                values.append(val[0]['value'])
 
         if not values:
-            logger.warning("⚠️ Toate valorile sunt NaN.")
             return JSONResponse(status_code=404, content={"error": "Fără date valide pentru inflație."})
 
         average = round(sum(values) / len(values), 2)
-        logger.info(f"✅ Inflație medie (ultimii {len(values)} ani): {average}%")
         return average
 
     except Exception as e:
-        logger.error(f"❌ Eroare generală în /inflation-average: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
