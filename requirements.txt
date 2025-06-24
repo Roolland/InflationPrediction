@@ -7,3 +7,4 @@ wbgapi
 statsmodels
 plotly
 pydantic
+wbdata
