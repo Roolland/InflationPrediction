@@ -108,7 +108,7 @@ def get_romania_inflation_average():
 
         # Inițializăm conexiunea la World Bank API
         logger.info("🌍 Inițializăm sursa World Bank")
-        wb.source()
+        wb.source
 
         # Iterăm anii 2014–2023
         values = []
