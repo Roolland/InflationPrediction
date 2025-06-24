@@ -105,16 +105,18 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
 def get_romania_inflation_average():
     try:
         logger.info("📥 Începe procesarea /inflation-average")
-        
+
         indicator = {'FP.CPI.TOTL.ZG': 'inflation'}
-        data_date = (datetime.datetime(2014, 1, 1), datetime.datetime(2023, 12, 31))
-        df = wbdata.get_dataframe(indicator, country="RO", data_date=data_date, convert_date=True)
+        start_date = datetime.datetime(2014, 1, 1)
+        end_date = datetime.datetime(2023, 12, 31)
+
+        wbdata.set_date(start_date, end_date)
+        df = wbdata.get_dataframe(indicator, country="RO", convert_date=True)
 
         if df.empty:
-            logger.error("❌ Nu s-au găsit date valide pentru inflație.")
-            return JSONResponse(status_code=404, content={"error": "Fără date valide pentru inflație."})
+            raise ValueError("Nu s-au găsit date pentru inflație.")
 
-        logger.info(f"📈 Date inflație extrase:\n{df}")
+        logger.info(f"📈 Date extrase:\n{df.head()}")
 
         average = round(df["inflation"].mean(), 2)
         logger.info(f"📊 Inflație medie: {average}%")
