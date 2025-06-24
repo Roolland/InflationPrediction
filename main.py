@@ -101,26 +101,36 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
         logger.error(f"❌ Eroare în endpoint /predict-multi-arima: {e}")
         return {"error": str(e)}
 
+
 @app.get("/inflation-average")
 def get_romania_inflation_average():
     try:
-        # Set indicator și țară
-        indicator = {"FP.CPI.TOTL.ZG": "inflation"}
-        country = "RO"
+        values = []
 
-        # Luăm toate datele disponibile
-        df = wbdata.get_dataframe(indicator, country=country, convert_date=True)
+        for year in range(2014, 2024):  # Ultimii 10 ani
+            try:
+                val = wb.data.get('FP.CPI.TOTL.ZG', economy='RO', time=year)
+                logger.info(f"✅ {year}: Răspuns WorldBank: {val}")
 
-        # Filtrăm manual pe anii doriți (2014–2023)
-        df_filtered = df[(df.index >= "2014-01-01") & (df.index <= "2023-12-31")]
+                if val and isinstance(val, list) and val[0]['value'] is not None:
+                    values.append(val[0]['value'])
 
-        if df_filtered.empty:
-            return JSONResponse(status_code=404, content={"error": "Fără date valide."})
+            except Exception as year_err:
+                logger.warning(f"⚠️ Eroare la preluarea datelor pentru anul {year}: {year_err}")
+                traceback.print_exc()
 
-        average = round(df_filtered["inflation"].mean(), 2)
-        return {"average_inflation": average}
+        if not values:
+            logger.warning("⚠️ Nu s-au obținut valori valide pentru inflație.")
+            return JSONResponse(status_code=404, content={"error": "Fără date valide pentru inflație."})
+
+        average = round(sum(values) / len(values), 2)
+        logger.info(f"✅ Media inflației pe ultimii {len(values)} ani: {average}%")
+        return average
 
     except Exception as e:
+        logger.error("❌ Eroare generală în endpoint /inflation-average:")
+        logger.error(str(e))
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
