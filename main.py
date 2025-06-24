@@ -104,20 +104,40 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
 @app.get("/inflation-average")
 def get_romania_inflation_average():
     try:
+        logger.info("📥 Începe procesarea /inflation-average")
+
+        # Inițializăm conexiunea la World Bank API
+        logger.info("🌍 Inițializăm sursa World Bank")
+        wb.source()
+
+        # Iterăm anii 2014–2023
         values = []
-        for year in range(2014, 2024):  # Ultimii 10 ani
+        for year in range(2014, 2024):
+            logger.info(f"📅 Preluăm inflația pentru anul {year}")
+            try:
+                val = wb.data.get('FP.CPI.TOTL.ZG', economy='RO', time=year)
 
-            val = wb.data.get('FP.CPI.TOTL.ZG', economy='RO', time=year)
+                if val and isinstance(val, list) and val[0]['value'] is not None:
+                    logger.info(f"✅ Inflație găsită pentru {year}: {val[0]['value']}%")
+                    values.append(val[0]['value'])
+                else:
+                    logger.warning(f"⚠️ Inflație lipsă pentru {year}")
 
-            if val and isinstance(val, list) and val[0]['value'] is not None:
-                values.append(val[0]['value'])
+            except Exception as e:
+                logger.warning(f"❌ Eroare la preluarea inflației pentru {year}: {e}")
 
         if not values:
+            logger.error("❌ Nu s-au găsit date valide pentru niciun an.")
             return JSONResponse(status_code=404, content={"error": "Fără date valide pentru inflație."})
 
+        # Calculăm media
         average = round(sum(values) / len(values), 2)
+        logger.info(f"📊 Inflație medie calculată pe {len(values)} ani: {average}%")
+
         return average
 
     except Exception as e:
+        logger.error(f"💥 Eroare critică în /inflation-average: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
 
