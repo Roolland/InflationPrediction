@@ -105,32 +105,19 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
 def get_romania_inflation_average():
     try:
         logger.info("📥 Începe procesarea /inflation-average")
+        
+        indicator = {'FP.CPI.TOTL.ZG': 'inflation'}
+        data_date = (datetime.datetime(2014, 1, 1), datetime.datetime(2023, 12, 31))
+        df = wbdata.get_dataframe(indicator, country="RO", data_date=data_date, convert_date=True)
 
-        # 🛠 Selectăm sursa corectă de date
-        wb.source(2)
-        logger.info("🌍 Sursă WB setată: 2 (indicatori economici)")
-
-        values = []
-        for year in range(2014, 2024):
-            logger.info(f"📅 Preluăm inflația pentru anul {year}")
-            try:
-                val = wb.data.get('FP.CPI.TOTL.ZG', economy='RO', time=year)
-
-                if val and isinstance(val, list) and val[0]['value'] is not None:
-                    logger.info(f"✅ Inflație găsită pentru {year}: {val[0]['value']}%")
-                    values.append(val[0]['value'])
-                else:
-                    logger.warning(f"⚠️ Inflație lipsă pentru {year}")
-
-            except Exception as e:
-                logger.warning(f"❌ Eroare la preluarea inflației pentru {year}: {e}")
-
-        if not values:
+        if df.empty:
             logger.error("❌ Nu s-au găsit date valide pentru inflație.")
             return JSONResponse(status_code=404, content={"error": "Fără date valide pentru inflație."})
 
-        average = round(sum(values) / len(values), 2)
-        logger.info(f"📊 Inflație medie pe {len(values)} ani: {average}%")
+        logger.info(f"📈 Date inflație extrase:\n{df}")
+
+        average = round(df["inflation"].mean(), 2)
+        logger.info(f"📊 Inflație medie: {average}%")
         return average
 
     except Exception as e:
