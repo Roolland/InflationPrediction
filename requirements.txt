@@ -6,3 +6,4 @@ matplotlib
 wbgapi
 statsmodels
 plotly
+pydantic
