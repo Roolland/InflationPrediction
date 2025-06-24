@@ -117,7 +117,7 @@ def get_romania_inflation_average():
                 df = wbdata.get_dataframe(
                     indicator, 
                     country='RO', 
-                    data_date=(datetime.datetime(year, 1, 1), datetime.datetime(year, 12, 31)),
+                    data_dates=(datetime.datetime(year, 1, 1), datetime.datetime(year, 12, 31)),
                     convert_date=True
                 )
 
