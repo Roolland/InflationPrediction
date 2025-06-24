@@ -5,7 +5,9 @@ import pandas as pd
 from fastapi import FastAPI, Request
 from statsmodels.tsa.arima.model import ARIMA
 import logging
-
+import wbdata
+import datetime
+from fastapi.responses import JSONResponse
 # Configurare basic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,3 +99,28 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
     except Exception as e:
         logger.error(f"❌ Eroare în endpoint /predict-multi-arima: {e}")
         return {"error": str(e)}
+import wbdata
+import datetime
+from fastapi.responses import JSONResponse
+
+@app.get("/inflation-average")
+def get_romania_inflation_average():
+    try:
+        # Ultimii 15 ani
+        end_date = datetime.datetime.today()
+        start_date = end_date.replace(year=end_date.year - 15)
+
+        indicator = {'FP.CPI.TOTL.ZG': 'inflation'}
+
+        df = wbdata.get_dataframe(indicator, country='RO', data_date=(start_date, end_date), convert_date=True)
+
+        if df.empty:
+            return JSONResponse(status_code=404, content={"error": "Nu s-au găsit date pentru inflație."})
+
+        media = round(df.dropna()["inflation"].mean(), 2)
+
+        return media  # răspuns simplu: doar float
+
+    except Exception as e:
+        logger.error(f"Eroare în /inflation-average: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
