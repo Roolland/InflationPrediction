@@ -105,42 +105,44 @@ from fastapi.responses import JSONResponse
 
 @app.get("/inflation-average")
 def get_romania_inflation_average():
-    try:
-        end_year = datetime.datetime.today().year
-        start_year = end_year - 15
-        indicator = {'FP.CPI.TOTL.ZG': 'inflation'}
+    import wbdata
+    import datetime
+    import logging
 
+    logger = logging.getLogger("main")
+
+    try:
+        end_year = datetime.datetime.today().year - 1  # excludem 2025
+        start_year = end_year - 9  # ultimii 10 ani
+
+        indicator = 'FP.CPI.TOTL.ZG'  # Cod inflație World Bank
         values = []
 
         for year in range(start_year, end_year + 1):
             try:
-                df = wbdata.get_dataframe(
-                    indicator, 
-                    country='RO', 
-                    data_dates=(datetime.datetime(year, 1, 1), datetime.datetime(year, 12, 31)),
-                    convert_date=True
+                data = wbdata.get_data(
+                    indicator=indicator,
+                    country='RO',
+                    data_date=datetime.datetime(year, 1, 1)
                 )
 
-                if not df.empty:
-                    val = df["inflation"].dropna().values
-                    if len(val) > 0:
-                        values.append(val[0])
-                    else:
-                        logger.warning(f"❗ Inflație lipsă pentru anul {year}")
+                if data and isinstance(data, list) and data[0]['value'] is not None:
+                    values.append(data[0]['value'])
+                    logger.info(f"✅ Inflație {year}: {data[0]['value']}%")
                 else:
-                    logger.warning(f"❗ DataFrame gol pentru anul {year}")
+                    logger.warning(f"⚠️ Inflație lipsă pentru anul {year}")
 
             except Exception as e:
                 logger.warning(f"⚠️ Eroare la preluarea datelor pentru anul {year}: {e}")
 
         if not values:
-            logger.error("Nu s-au putut extrage date de inflație pentru niciun an.")
-            return JSONResponse(status_code=404, content={"error": "Nu s-au găsit valori valide pentru inflație."})
+            logger.error("❌ Nu s-au găsit valori valide pentru inflație.")
+            return JSONResponse(status_code=404, content={"error": "Fără date valide."})
 
         media = round(sum(values) / len(values), 2)
-        logger.info(f"✅ Inflație medie calculată pe {len(values)} ani: {media}")
+        logger.info(f"📊 Media inflației (ultimii {len(values)} ani): {media}%")
         return media
 
     except Exception as e:
-        logger.error(f"❌ Eroare în /inflation-average: {e}")
+        logger.error(f"❌ Eroare generală în /inflation-average: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
