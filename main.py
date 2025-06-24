@@ -103,27 +103,23 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
 
 @app.get("/inflation-average")
 def get_romania_inflation_average():
-    try:
-        logger.info("📥 Începe procesarea /inflation-average")
+        # Set indicator și țară
+        indicator = {"FP.CPI.TOTL.ZG": "inflation"}
+        country = "RO"
 
-        indicator = {'FP.CPI.TOTL.ZG': 'inflation'}
-        start_date = datetime.datetime(2014, 1, 1)
-        end_date = datetime.datetime(2023, 12, 31)
+        # Luăm toate datele disponibile
+        df = wbdata.get_dataframe(indicator, country=country, convert_date=True)
 
-        wbdata.set_date(start_date, end_date)
-        df = wbdata.get_dataframe(indicator, country="RO", convert_date=True)
+        # Filtrăm manual pe anii doriți (2014–2023)
+        df_filtered = df[(df.index >= "2014-01-01") & (df.index <= "2023-12-31")]
 
-        if df.empty:
-            raise ValueError("Nu s-au găsit date pentru inflație.")
+        if df_filtered.empty:
+            return JSONResponse(status_code=404, content={"error": "Fără date valide."})
 
-        logger.info(f"📈 Date extrase:\n{df.head()}")
-
-        average = round(df["inflation"].mean(), 2)
-        logger.info(f"📊 Inflație medie: {average}%")
-        return average
+        average = round(df_filtered["inflation"].mean(), 2)
+        return {"average_inflation": average}
 
     except Exception as e:
-        logger.error(f"💥 Eroare critică în /inflation-average: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
