@@ -150,7 +150,7 @@ def get_romania_inflation_average():
 
         average = round(sum(values) / len(values), 2)
         logger.info(f"✅ Media inflației pe {len(values)} ani: {average}%")
-        return {"average_inflation": average}
+        return average
 
     except Exception as e:
         logger.error("❌ Eroare generală în /inflation-average:")
