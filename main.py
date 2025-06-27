@@ -103,12 +103,26 @@ async def predict_multi_arima(data: HistoryInput, request: Request):
         return {"error": str(e)}
 
 
+# Valori fallback pentru inflație (sursa: INS/istoric)
+map_fallback_inflation = {
+    2014: 1.1,
+    2015: -0.6,
+    2016: -1.5,
+    2017: 1.3,
+    2018: 4.6,
+    2019: 3.8,
+    2020: 2.6,
+    2021: 5.0,
+    2022: 13.8,
+    2023: 10.4
+}
+
 @app.get("/inflation-average")
 def get_romania_inflation_average():
     try:
-        values = []
+        values: List[float] = []
 
-        for year in range(2014, 2024):  # Ultimii 10 ani
+        for year in range(2014, 2024):
             try:
                 val = wb.data.get('FP.CPI.TOTL.ZG', economy='RO', time=year)
                 logger.info(f"✅ {year}: Răspuns WorldBank: {val}")
@@ -116,23 +130,30 @@ def get_romania_inflation_average():
                 if val and isinstance(val, list) and val[0]['value'] is not None:
                     values.append(val[0]['value'])
                 else:
-                    logger.warning(f"⚠️ Valoare inflație lipsă pentru anul {year}.")
+                    logger.warning(f"⚠️ Valoare inflație lipsă pentru {year}. Se încearcă fallback.")
+                    if year in map_fallback_inflation:
+                        values.append(map_fallback_inflation[year])
+                        logger.info(f"➡️ Folosim fallback pentru {year}: {map_fallback_inflation[year]}%")
+                    else:
+                        logger.warning(f"⛔ Fallback indisponibil pentru anul {year}")
 
             except Exception as year_err:
-                logger.warning(f"⚠️ Eroare la preluarea datelor pentru anul {year}: {year_err}")
+                logger.warning(f"⚠️ Eroare pentru anul {year}: {year_err}")
                 logger.debug(traceback.format_exc())
+                if year in map_fallback_inflation:
+                    values.append(map_fallback_inflation[year])
+                    logger.info(f"➡️ Folosim fallback pentru {year}: {map_fallback_inflation[year]}%")
 
         if not values:
-            logger.warning("⚠️ Nu s-au obținut valori valide pentru inflație.")
+            logger.warning("⚠️ Nu s-au obținut valori valide.")
             return JSONResponse(status_code=404, content={"error": "Fără date valide pentru inflație."})
 
         average = round(sum(values) / len(values), 2)
-        logger.info(f"✅ Media inflației pe ultimii {len(values)} ani: {average}%")
-        return average
+        logger.info(f"✅ Media inflației pe {len(values)} ani: {average}%")
+        return {"average_inflation": average}
 
     except Exception as e:
-        logger.error("❌ Eroare generală în endpoint /inflation-average:")
+        logger.error("❌ Eroare generală în /inflation-average:")
         logger.error(str(e))
         logger.debug(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": str(e)})
-
